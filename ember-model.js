@@ -1,6 +1,6 @@
 (function() {
 
-var VERSION = '0.0.16';
+var VERSION = '0.0.17';
 
 if (Ember.libraries) {
   Ember.libraries.register('Ember Model', VERSION);
@@ -290,7 +290,7 @@ Ember.ManyArray = Ember.RecordArray.extend({
     get(this, 'originalContent').removeObject(originalObj);
   },
 
-  isDirty: function() {
+  isDirty: Ember.computed('content.[]', 'originalContent.[]', '_modifiedRecords.[]', function() {
     var originalContent = get(this, 'originalContent'),
         originalContentLength = get(originalContent, 'length'),
         content = get(this, 'content'),
@@ -310,7 +310,7 @@ Ember.ManyArray = Ember.RecordArray.extend({
     }
 
     return isDirty;
-  }.property('content.[]', 'originalContent.[]', '_modifiedRecords.[]'),
+  }),
 
   objectAtContent: function(idx) {
     var content = get(this, 'content');
@@ -336,18 +336,18 @@ Ember.ManyArray = Ember.RecordArray.extend({
     // TODO: loop over dirty records only
     return Ember.RSVP.all(this.map(function(record) {
       return record.save();
-    }));
+    })).then(Ember.A);
   },
 
   replaceContent: function(index, removed, added) {
     added = added.map(function(record) {
       return record._reference;
-    }, this);
+    });
 
     this._super(index, removed, added);
   },
 
-  _contentDidChange: function() {
+  _contentDidChange: Ember.observer('content', function() {
     var content = get(this, 'content');
     var contentPrev = this._content;
 
@@ -363,7 +363,7 @@ Ember.ManyArray = Ember.RecordArray.extend({
     }
 
     this._content = content;
-  }.observes('content'),
+  }),
 
   arrayWillChange: function(item, idx, removedCnt, addedCnt) {
     var content = item;
@@ -402,9 +402,9 @@ Ember.ManyArray = Ember.RecordArray.extend({
   load: function(content) {
     Ember.setProperties(this, {
       content: content,
-      originalContent: content.slice()
+      originalContent: Ember.A(content.slice())
     });
-    set(this, '_modifiedRecords', []);
+    set(this, '_modifiedRecords', Ember.A([]));
   },
 
   revert: function() {
@@ -414,9 +414,9 @@ Ember.ManyArray = Ember.RecordArray.extend({
   _setupOriginalContent: function(content) {
     content = content || get(this, 'content');
     if (content) {
-      set(this, 'originalContent', content.slice());
+      set(this, 'originalContent', Ember.A(content.slice()));
     }
-    set(this, '_modifiedRecords', []);
+    set(this, '_modifiedRecords', Ember.A([]));
   },
 
   init: function() {
@@ -571,19 +571,23 @@ Ember.Model = Ember.Object.extend(Ember.Evented, {
     return value;
   },
 
-  isDirty: function() {
+  isDirty: Ember.computed('_dirtyAttributes.length', function() {
     var dirtyAttributes = get(this, '_dirtyAttributes');
     return dirtyAttributes && dirtyAttributes.length !== 0 || false;
-  }.property('_dirtyAttributes.length'),
+  }),
 
   _relationshipBecameDirty: function(name) {
     var dirtyAttributes = get(this, '_dirtyAttributes');
-    if (!dirtyAttributes.contains(name)) { dirtyAttributes.pushObject(name); }
+    if (dirtyAttributes) {
+        dirtyAttributes.addObject(name);
+    } else {
+        set(this, '_dirtyAttributes', Ember.A([name]));
+    }
   },
 
   _relationshipBecameClean: function(name) {
     var dirtyAttributes = get(this, '_dirtyAttributes');
-    dirtyAttributes.removeObject(name);
+    if (dirtyAttributes) { dirtyAttributes.removeObject(name); }
   },
 
   dataKey: function(key) {
@@ -598,7 +602,7 @@ Ember.Model = Ember.Object.extend(Ember.Evented, {
   init: function() {
     this._createReference();
     if (!this._dirtyAttributes) {
-      set(this, '_dirtyAttributes', []);
+      set(this, '_dirtyAttributes', Ember.A([]));
     }
     this._super();
   },
@@ -631,7 +635,7 @@ Ember.Model = Ember.Object.extend(Ember.Evented, {
     var data = {};
     data[get(this.constructor, 'primaryKey')] = id;
     set(this, '_data', Ember.merge(data, hash));
-    this.getWithDefault('_dirtyAttributes', []).clear();
+    this.getWithDefault('_dirtyAttributes', Ember.A([])).clear();
 
     this._reloadHasManys();
 
@@ -756,12 +760,12 @@ Ember.Model = Ember.Object.extend(Ember.Evented, {
   },
 
   reload: function() {
-    this.getWithDefault('_dirtyAttributes', []).clear();
+    this.getWithDefault('_dirtyAttributes', Ember.A([])).clear();
     return this.constructor.reload(this.get(get(this.constructor, 'primaryKey')), this.container);
   },
 
   revert: function() {
-    this.getWithDefault('_dirtyAttributes', []).clear();
+    this.getWithDefault('_dirtyAttributes', Ember.A([])).clear();
     this.notifyPropertyChange('_data');
     this._reloadHasManys(true);
   },
@@ -772,7 +776,7 @@ Ember.Model = Ember.Object.extend(Ember.Evented, {
 
     set(this, 'isNew', false);
 
-    set(this, '_dirtyAttributes', []);
+    set(this, '_dirtyAttributes', Ember.A([]));
     this.constructor.addToRecordArrays(this);
     this.trigger('didCreateRecord');
     this.didSaveRecord();
@@ -809,7 +813,7 @@ Ember.Model = Ember.Object.extend(Ember.Evented, {
       key = dirtyAttributes[i];
       data[this.dataKey(key)] = this.cacheFor(key);
     }
-    set(this, '_dirtyAttributes', []);
+    set(this, '_dirtyAttributes', Ember.A([]));
     this._resetDirtyStateInNestedObjects(this); // we need to reset isDirty state to all child objects in embedded relationships
   },
 
@@ -1437,6 +1441,9 @@ Ember.hasMany = function(type, options) {
       return this.getHasMany(key, type, meta, this.container);
     },
     set: function(propertyKey, newContentArray, existingArray) {
+      if (!existingArray) {
+        existingArray = this.getHasMany(options.key || propertyKey, type, meta, this.container);
+      }
       return existingArray.setObjects(newContentArray);
     }
   }).meta(meta);
@@ -1548,9 +1555,7 @@ Ember.belongsTo = function(type, options) {
       }
 
       if (value) {
-        Ember.assert(Ember.String.fmt('Attempted to set property of type: %@ with a value of type: %@',
-                    [value.constructor, type]),
-                    value instanceof type);
+        Ember.assert('Attempted to set property of type: ' + value.constructor + ' with a value of type: ' + type, value instanceof type);
       }
 
       if (oldValue !== value) {
@@ -1682,7 +1687,7 @@ Ember.attr = function(type, options) {
           dirtyAttributes = get(this, '_dirtyAttributes'),
           createdDirtyAttributes = false;
       if (!dirtyAttributes) {
-        dirtyAttributes = [];
+        dirtyAttributes = Ember.A([]);
         createdDirtyAttributes = true;
       }
 
@@ -1804,7 +1809,7 @@ Ember.RESTAdapter = Ember.Adapter.extend({
         url = this.buildURL(record.constructor, get(record, primaryKey)),
         self = this;
 
-    return this.ajax(url, record.toJSON(), "DELETE").then(function(data) {  // TODO: Some APIs may or may not return data
+    return this.ajax(url, record.toJSON(), "DELETE").then(function(data) {
       self.didDeleteRecord(record, data);
     });
   },
@@ -1838,6 +1843,7 @@ Ember.RESTAdapter = Ember.Adapter.extend({
   },
 
   _ajax: function(url, params, method, settings) {
+    var self = this;
     if (!settings) {
       settings = this.ajaxSettings(url, method);
     }
@@ -1862,12 +1868,20 @@ Ember.RESTAdapter = Ember.Adapter.extend({
           jqXHR.then = null;
         }
 
-        Ember.run(null, reject, jqXHR);
+        self._handleRejections(method, jqXHR, resolve, reject);
       };
 
 
       Ember.$.ajax(settings);
    });
+  },
+
+  _handleRejections: function(method, jqXHR, resolve, reject) {
+    if (method === "DELETE" && jqXHR.status >= 200 && jqXHR.status < 300) {
+      Ember.run(null, resolve, null);
+    } else {
+      Ember.run(null, reject, jqXHR);
+    }
   },
 
   _loadRecordFromData: function(record, data) {
@@ -2024,7 +2038,8 @@ Ember.onLoad('Ember.Application', function(Application) {
   Application.initializer({
     name: "data-adapter",
 
-    initialize: function(container, application) {
+    initialize: function() {
+      var application = arguments[1] || arguments[0];
       application.register('data-adapter:main', DebugAdapter);
     }
   });
@@ -2098,7 +2113,8 @@ Ember.onLoad('Ember.Application', function(Application) {
   Application.initializer({
     name: "store",
 
-    initialize: function(_, application) {
+    initialize: function() {
+      var application = arguments[1] || arguments[0];
       var store = application.Store || Ember.Model.Store;
       application.register('store:application', store);
       application.register('store:main', store);
