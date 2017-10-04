@@ -1,6 +1,6 @@
 (function() {
 
-var VERSION = '0.0.17';
+var VERSION = '0.0.20-intercom';
 
 if (Ember.libraries) {
   Ember.libraries.register('Ember Model', VERSION);
@@ -191,7 +191,7 @@ Ember.RecordArray = Ember.ArrayProxy.extend(Ember.Evented, {
     var modelClass = this.get('modelClass'),
         self = this,
         promises;
-    
+
     set(this, 'isLoaded', false);
     if (modelClass._findAllRecordArray === this) {
       return modelClass.adapter.findAll(modelClass, this);
