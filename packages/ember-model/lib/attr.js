@@ -69,20 +69,11 @@ Ember.attr = function(type, options) {
       var data = get(this, '_data'),
           dataKey = this.dataKey(key),
           dataValue = data && get(data, dataKey),
-          beingCreated = meta(this).proto === this,
           dirtyAttributes = get(this, '_dirtyAttributes'),
           createdDirtyAttributes = false;
       if (!dirtyAttributes) {
         dirtyAttributes = Ember.A([]);
         createdDirtyAttributes = true;
-      }
-
-      if (beingCreated) {
-        if (!data) {
-          data = {};
-          set(this, '_data', data);
-        }
-        dataValue = data[dataKey] = value;
       }
 
       if (dataValue !== serialize(value, type)) {
