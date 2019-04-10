@@ -4,12 +4,12 @@
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
 
-// 0.0.14-77-g1b58959
-// 1b58959 (2019-04-09 15:12:15 +0100)
+// 0.0.14-78-g1a35b19
+// 1a35b19 (2019-04-10 09:36:18 +0100)
 
 (function() {
 
-  var VERSION = '3.8.0-intercom';
+  var VERSION = '3.8.0-intercom.1';
   
   if (Ember.libraries) {
     Ember.libraries.register('Ember Model', VERSION);
@@ -602,12 +602,7 @@
     },
   
     dataKey: function(key) {
-      var camelizeKeys = get(this.constructor, 'camelizeKeys');
-      var meta = this.constructor.metaForProperty(key);
-      if (meta.options && meta.options.key) {
-        return camelizeKeys ? underscore(meta.options.key) : meta.options.key;
-      }
-      return camelizeKeys ? underscore(key) : key;
+      return this.constructor.dataKey(key);
     },
   
     init: function() {
@@ -928,15 +923,7 @@
   
         for (var i=0; i<attributes.length; i++) {
           var attribute = attributes[i];
-          var transformedKey;
-          var meta = this.metaForProperty(attribute);
-  
-          if (meta.options && meta.options.key) {
-            transformedKey = this.camelizeKeys ? underscore(meta.options.key) : meta.options.key;
-          } else {
-            transformedKey = this.camelizeKeys ? underscore(attribute) : attribute;
-          }
-  
+          var transformedKey = this.dataKey(attribute);
           transformedProperties[transformedKey] = properties[attribute];
         }
       }
@@ -945,6 +932,14 @@
       obj.set('_data', transformedProperties);
       obj.setProperties(properties);
       return obj;
+    },
+  
+    dataKey: function(key) {
+      var meta = this.metaForProperty(key);
+      if (meta.options && meta.options.key) {
+        return this.camelizeKeys ? underscore(meta.options.key) : meta.options.key;
+      }
+      return this.camelizeKeys ? underscore(key) : key;
     },
   
     adapter: Ember.Adapter.create(),
