@@ -79,12 +79,7 @@ Ember.Model = Ember.Object.extend(Ember.Evented, {
   },
 
   dataKey: function(key) {
-    var camelizeKeys = get(this.constructor, 'camelizeKeys');
-    var meta = this.constructor.metaForProperty(key);
-    if (meta.options && meta.options.key) {
-      return camelizeKeys ? underscore(meta.options.key) : meta.options.key;
-    }
-    return camelizeKeys ? underscore(key) : key;
+    return this.constructor.dataKey(key);
   },
 
   init: function() {
@@ -405,15 +400,7 @@ Ember.Model.reopenClass({
 
       for (var i=0; i<attributes.length; i++) {
         var attribute = attributes[i];
-        var transformedKey;
-        var meta = this.metaForProperty(attribute);
-
-        if (meta.options && meta.options.key) {
-          transformedKey = this.camelizeKeys ? underscore(meta.options.key) : meta.options.key;
-        } else {
-          transformedKey = this.camelizeKeys ? underscore(attribute) : attribute;
-        }
-
+        var transformedKey = this.dataKey(attribute);
         transformedProperties[transformedKey] = properties[attribute];
       }
     }
@@ -422,6 +409,14 @@ Ember.Model.reopenClass({
     obj.set('_data', transformedProperties);
     obj.setProperties(properties);
     return obj;
+  },
+
+  dataKey: function(key) {
+    var meta = this.metaForProperty(key);
+    if (meta.options && meta.options.key) {
+      return this.camelizeKeys ? underscore(meta.options.key) : meta.options.key;
+    }
+    return this.camelizeKeys ? underscore(key) : key;
   },
 
   adapter: Ember.Adapter.create(),
