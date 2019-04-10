@@ -39,7 +39,7 @@ function isDescriptor(value) {
   return value && typeof value === 'object' && value.isDescriptor;
 }
 
-Ember.run.queues.push('data');
+Ember.run.backburner.queueNames.push('data');
 
 Ember.Model = Ember.Object.extend(Ember.Evented, {
   isLoaded: true,
@@ -79,12 +79,7 @@ Ember.Model = Ember.Object.extend(Ember.Evented, {
   },
 
   dataKey: function(key) {
-    var camelizeKeys = get(this.constructor, 'camelizeKeys');
-    var meta = this.constructor.metaForProperty(key);
-    if (meta.options && meta.options.key) {
-      return camelizeKeys ? underscore(meta.options.key) : meta.options.key;
-    }
-    return camelizeKeys ? underscore(key) : key;
+    return this.constructor.dataKey(key);
   },
 
   init: function() {
@@ -397,6 +392,32 @@ Ember.Model = Ember.Object.extend(Ember.Evented, {
 
 Ember.Model.reopenClass({
   primaryKey: 'id',
+
+  create: function(properties) {
+    var transformedProperties = {};
+    if (properties) {
+      var attributes = this.getAttributes();
+
+      for (var i=0; i<attributes.length; i++) {
+        var attribute = attributes[i];
+        var transformedKey = this.dataKey(attribute);
+        transformedProperties[transformedKey] = properties[attribute];
+      }
+    }
+
+    var obj = this._super.apply(this, arguments);
+    obj.set('_data', transformedProperties);
+    obj.setProperties(properties);
+    return obj;
+  },
+
+  dataKey: function(key) {
+    var meta = this.metaForProperty(key);
+    if (meta.options && meta.options.key) {
+      return this.camelizeKeys ? underscore(meta.options.key) : meta.options.key;
+    }
+    return this.camelizeKeys ? underscore(key) : key;
+  },
 
   adapter: Ember.Adapter.create(),
 
