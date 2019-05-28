@@ -17,7 +17,7 @@ QUnit.test("is a CP macro", function(assert) {
 
   Comment.primaryKey = 'token';
 
-  assert.ok(cp instanceof Ember.ComputedProperty);
+  assert.ok(Ember.Model._isDescriptor(cp));
 
   var article = Article.create();
   Ember.run(article, article.load, 1, {comments: Ember.A([{token: 'a'}, {token: 'b'}])});
@@ -39,7 +39,7 @@ var Comment = Ember.Model.extend({
 
   Comment.primaryKey = 'token';
 
-  assert.ok(cp instanceof Ember.ComputedProperty);
+  assert.ok(Ember.Model._isDescriptor(cp));
 
   var article = Article.create();
   Ember.run(article, article.load, 1, {comments: Ember.A([1, 2])});

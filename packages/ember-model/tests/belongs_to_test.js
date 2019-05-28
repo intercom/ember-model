@@ -13,7 +13,7 @@ QUnit.test("is a CP macro", function(assert) {
         article: cp
       });
 
-  assert.ok(cp instanceof Ember.ComputedProperty);
+  assert.ok(Ember.Model._isDescriptor(cp));
 });
 
 QUnit.test("using it in a model definition", function(assert) {

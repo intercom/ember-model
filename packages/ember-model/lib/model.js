@@ -1,5 +1,6 @@
 require('ember-model/adapter');
 require('ember-model/record_array');
+var __EMBER_METAL__ = Ember.__loader.require('@ember/-internals/metal');
 
 var get = Ember.get,
     set = Ember.set,
@@ -31,12 +32,13 @@ function hasCachedValue(object, key) {
 }
 
 function isDescriptor(value) {
-  // Ember < 1.11
-  if (Ember.Descriptor !== undefined) {
-    return value instanceof Ember.Descriptor;
+  if (__EMBER_METAL__.isClassicDecorator) {
+    return __EMBER_METAL__.isClassicDecorator(value);
+  } else {
+    return (
+      value && (typeof value === 'object' || typeof value === 'function') && value.isDescriptor
+    );
   }
-  // Ember >= 1.11
-  return value && typeof value === 'object' && value.isDescriptor;
 }
 
 Ember.run.backburner.queueNames.push('data');
@@ -117,7 +119,7 @@ Ember.Model = Ember.Object.extend(Ember.Evented, {
   load: function(id, hash) {
     var data = {};
     data[get(this.constructor, 'primaryKey')] = id;
-    set(this, '_data', Ember.merge(data, hash));
+    set(this, '_data', Ember.assign(data, hash));
     this.getWithDefault('_dirtyAttributes', Ember.A([])).clear();
 
     this._reloadHasManys();
@@ -392,6 +394,8 @@ Ember.Model = Ember.Object.extend(Ember.Evented, {
 
 Ember.Model.reopenClass({
   primaryKey: 'id',
+
+  _isDescriptor: isDescriptor,
 
   create: function(properties) {
     var transformedProperties = {};
