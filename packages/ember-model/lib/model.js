@@ -150,7 +150,7 @@ Ember.Model = Ember.Object.extend(Ember.Evented, {
   },
 
   didDefineProperty: function(proto, key, value) {
-    if (isDescriptor(value)) {
+    if (isDescriptor(value) && value.meta) {
       var meta = value.meta();
       var klass = proto.constructor;
 
