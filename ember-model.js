@@ -4,11 +4,10 @@
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
 
-// 3.10.0-intercom.2
-// d30701d (2019-05-28 10:24:33 +0100)
+// 3.11.0-intercom.1
 
 (function() {
-  var VERSION = "3.10.0-intercom.2";
+  var VERSION = "3.11.0-intercom.1";
 
   if (Ember.libraries) {
     Ember.libraries.register("Ember Model", VERSION);
@@ -1801,7 +1800,9 @@
 
         if (meta.options.embedded) {
           if (oldValue) {
-            oldValue.removeObserver("isDirty", dirtyChanged);
+            try {
+              oldValue.removeObserver('isDirty', dirtyChanged);
+            } catch(e) { }
           }
           if (value) {
             value.addObserver("isDirty", dirtyChanged);
