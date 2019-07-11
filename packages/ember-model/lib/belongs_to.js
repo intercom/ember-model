@@ -96,7 +96,9 @@ Ember.belongsTo = function(type, options) {
 
       if (meta.options.embedded) {
         if (oldValue) {
-          oldValue.removeObserver('isDirty', dirtyChanged);
+          try {
+            oldValue.removeObserver('isDirty', dirtyChanged);
+          } catch(e) { }
         }
         if (value) {
           value.addObserver('isDirty', dirtyChanged);
